@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Fast offline IP-to-country lookup using RIR data with country names and currency support"
 readme = "README.md"
 authors = [
-    { name = "Anas Khan", email = "83116240+anxkhn@users.noreply.github.com" }
+    { name = "Anas Khan", email = "anxkhn28@gmail.com" }
 ]
 requires-python = ">=3.11"
 dependencies = [
@@ -13,6 +13,7 @@ dependencies = [
     "tqdm>=4.65.0",
 ]
 license = { text = "MIT" }
+url = "https://github.com/anxkhn/ipmapper"
 
 [project.scripts]
 ipmapper = "ipmapper:main"
@@ -20,3 +21,42 @@ ipmapper = "ipmapper:main"
 [build-system]
 requires = ["uv_build>=0.8.11,<0.9.0"]
 build-backend = "uv_build"
+
+[tool.metadata]
+description = "Fast, offline IP geolocation using RIR data with country names and currency support"
+long_description = """
+# IPMapper - Offline IP-to-Country Lookup
+
+<p align="center">
+  <strong>Fast, offline IP geolocation using Regional Internet Registry (RIR) data</strong><br>
+  <em>No API calls • No rate limits • No signup required • Download once, use forever</em>
+</p>
+
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
+</div>
+
+## Motivation
+
+IPMapper addresses the need for **reliable, offline IP geolocation** without dependencies on external APIs or services. Built entirely on public Regional Internet Registry (RIR) data, it provides:
+
+- **Payment processing**: Determine customer currency from IP for automatic payment localization
+- **Feature restrictions**: Implement geo-blocking or feature availability based on country codes
+- **Compliance**: Meet data residency requirements by identifying user locations
+- **Analytics**: Understand user geographic distribution without third-party services
+- **Offline environments**: Work in air-gapped systems or areas with limited internet connectivity
+
+## Core Features
+
+- **Public RIR data only** (APNIC, ARIN, RIPE NCC, LACNIC, AFRINIC)
+- **ISO country codes, names, and currencies**
+- **Full IPv4 and IPv6 support**
+- **Radix tree lookup for fast performance**
+- **CIDR prefix aggregation for memory efficiency**
+- **Completely offline after first data download**
+
+See the [README.md](README.md) for full details, installation, usage, CLI reference, and examples.
+"""
