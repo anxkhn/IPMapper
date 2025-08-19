@@ -153,7 +153,7 @@ class OutputWriter:
         metadata = {
             "generated_timestamp": datetime.utcnow().isoformat() + "Z",
             "generator": "ipmapper",
-            "version": "0.1.0",
+            "version": "1.0",
             "license": "MIT",
             "description": "IP-to-country mapping derived from RIR delegated files",
             "sources": download_metadata.get("sources", {}),

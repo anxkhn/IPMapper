@@ -13,7 +13,7 @@ from .lookup import IPLookup, lookup
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="1.0")
 def cli():
     """Fast offline IP-to-country lookup using RIR data."""
     pass
