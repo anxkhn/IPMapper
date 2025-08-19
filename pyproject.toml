@@ -1,6 +1,6 @@
 [project]
 name = "ipmapper"
-version = "1.0"
+version = "1.0.0"
 description = "Fast offline IP-to-country lookup using RIR data with country names and currency support"
 readme = "README.md"
 authors = [
@@ -13,7 +13,24 @@ dependencies = [
     "tqdm>=4.65.0",
 ]
 license = { text = "MIT" }
-url = "https://github.com/anxkhn/ipmapper"
+keywords = ["ip", "geolocation", "country", "currency", "rir", "offline", "radix-tree"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+]
+
+[project.urls]
+Homepage = "https://github.com/anxkhn/ipmapper"
+Repository = "https://github.com/anxkhn/ipmapper"
+Issues = "https://github.com/anxkhn/ipmapper/issues"
 
 [project.scripts]
 ipmapper = "ipmapper:main"
@@ -21,42 +38,3 @@ ipmapper = "ipmapper:main"
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
-
-[tool.metadata]
-description = "Fast, offline IP geolocation using RIR data with country names and currency support"
-long_description = """
-# IPMapper - Offline IP-to-Country Lookup
-
-<p align="center">
-  <strong>Fast, offline IP geolocation using Regional Internet Registry (RIR) data</strong><br>
-  <em>No API calls • No rate limits • No signup required • Download once, use forever</em>
-</p>
-
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-
-</div>
-
-## Motivation
-
-IPMapper addresses the need for **reliable, offline IP geolocation** without dependencies on external APIs or services. Built entirely on public Regional Internet Registry (RIR) data, it provides:
-
-- **Payment processing**: Determine customer currency from IP for automatic payment localization
-- **Feature restrictions**: Implement geo-blocking or feature availability based on country codes
-- **Compliance**: Meet data residency requirements by identifying user locations
-- **Analytics**: Understand user geographic distribution without third-party services
-- **Offline environments**: Work in air-gapped systems or areas with limited internet connectivity
-
-## Core Features
-
-- **Public RIR data only** (APNIC, ARIN, RIPE NCC, LACNIC, AFRINIC)
-- **ISO country codes, names, and currencies**
-- **Full IPv4 and IPv6 support**
-- **Radix tree lookup for fast performance**
-- **CIDR prefix aggregation for memory efficiency**
-- **Completely offline after first data download**
-
-See the [README.md](README.md) for full details, installation, usage, CLI reference, and examples.
-"""
