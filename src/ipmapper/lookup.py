@@ -56,7 +56,7 @@ class IPLookup:
             data_dir: Directory containing processed data files
         """
         if data_dir is None:
-            data_dir = Path.home() / ".ipmap" / "processed"
+            data_dir = Path.home() / ".ipmapper" / "processed"
 
         self.data_dir = Path(data_dir)
         self.ipv4_tree = RadixNode()

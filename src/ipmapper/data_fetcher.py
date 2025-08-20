@@ -30,7 +30,7 @@ class DataFetcher:
             data_dir: Directory to store downloaded files. Defaults to ~/.ipmap
         """
         if data_dir is None:
-            data_dir = Path.home() / ".ipmap"
+            data_dir = Path.home() / ".ipmapper"
 
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(exist_ok=True)
