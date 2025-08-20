@@ -9,7 +9,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setuptools.setup(
     name="ipmapper",
-    version="1.0.0",
+    version="1.0.1",
     author="Anas Khan",
     author_email="anxkhn28@gmail.com",
     description="Fast offline IP-to-country lookup using RIR data with country names and currency support",
