@@ -77,11 +77,11 @@ class RIRParser:
         # Parse date
         try:
             if date_field and date_field.isdigit():
-                date = datetime.strptime(date_field, "%Y%m%d").date()
+                date = str(datetime.strptime(date_field, "%Y%m%d").date())
             else:
-                date = datetime(1900, 1, 1).date()  # Default for missing dates
+                date = str(datetime(1900, 1, 1).date())  # Default for missing dates
         except:
-            date = datetime(1900, 1, 1).date()
+            date = str(datetime(1900, 1, 1).date())
 
         # Convert to network prefixes
         prefixes = []
