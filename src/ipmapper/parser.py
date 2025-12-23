@@ -1,6 +1,5 @@
 """Parser for RIR delegated files."""
 
-import re
 import ipaddress
 from datetime import datetime
 from collections import defaultdict, namedtuple
@@ -80,7 +79,7 @@ class RIRParser:
                 date = datetime.strptime(date_field, "%Y%m%d").date()
             else:
                 date = datetime(1900, 1, 1).date()  # Default for missing dates
-        except:
+        except Exception:
             date = datetime(1900, 1, 1).date()
 
         # Convert to network prefixes

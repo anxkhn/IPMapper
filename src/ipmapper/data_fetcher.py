@@ -1,6 +1,5 @@
 """Data fetcher for downloading RIR delegated files."""
 
-import os
 import json
 import hashlib
 import shutil

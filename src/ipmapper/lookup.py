@@ -70,14 +70,14 @@ class IPLookup:
             try:
                 ip = ipaddress.ip_address(ip)
             except ValueError:
-                raise InvalidIPError(f"Invalid IP address: {ip}")
+                raise ValueError(f"Invalid IP address: {ip}")
 
         if isinstance(ip, ipaddress.IPv4Address):
             return format(int(ip), "032b")
         elif isinstance(ip, ipaddress.IPv6Address):
             return format(int(ip), "0128b")
         else:
-            raise InvalidIPError(f"Unsupported IP type: {type(ip)}")
+            raise ValueError(f"Unsupported IP type: {type(ip)}")
 
     def _prefix_to_bits(self, prefix):
         """Convert IP prefix to binary string of the network portion."""

@@ -13,7 +13,7 @@ from .lookup import IPLookup, lookup
 
 
 @click.group()
-@click.version_option(version="1.0")
+@click.version_option(version="1.1.0")
 def cli():
     """Fast offline IP-to-country lookup using RIR data."""
     pass
@@ -201,7 +201,6 @@ def status(data_dir):
             click.echo(
                 f"\nLast update: {metadata.get('download_timestamp', 'Unknown')}"
             )
-            stats = metadata.get("statistics", {})
         else:
             click.echo("\nNo metadata found.")
 

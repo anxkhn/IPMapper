@@ -5,7 +5,6 @@ import json
 import hashlib
 from datetime import datetime
 from pathlib import Path
-import ipaddress
 
 
 class OutputWriter:
@@ -27,81 +26,6 @@ class OutputWriter:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_sha256.update(chunk)
         return hash_sha256.hexdigest()
-
-    def write_csv_files(
-        self, ipv4_entries, ipv6_entries, ipv4_agg_entries, ipv6_agg_entries
-    ):
-        """Write all CSV files and return metadata."""
-        print("Writing CSV files...")
-
-        files_info = {}
-
-        # Write IPv4 raw
-        ipv4_file = self.output_dir / "prefixes_ipv4.csv"
-        with open(ipv4_file, "w", newline="") as f:
-            writer = csv.writer(f)
-            for entry in sorted(ipv4_entries, key=lambda x: x.prefix.network_address):
-                writer.writerow([str(entry.prefix), entry.cc])
-
-        files_info["prefixes_ipv4.csv"] = {
-            "path": str(ipv4_file),
-            "size": ipv4_file.stat().st_size,
-            "sha256": self._calculate_sha256(ipv4_file),
-            "count": len(ipv4_entries),
-        }
-
-        # Write IPv6 raw
-        ipv6_file = self.output_dir / "prefixes_ipv6.csv"
-        with open(ipv6_file, "w", newline="") as f:
-            writer = csv.writer(f)
-            for entry in sorted(ipv6_entries, key=lambda x: x.prefix.network_address):
-                writer.writerow([str(entry.prefix), entry.cc])
-
-        files_info["prefixes_ipv6.csv"] = {
-            "path": str(ipv6_file),
-            "size": ipv6_file.stat().st_size,
-            "sha256": self._calculate_sha256(ipv6_file),
-            "count": len(ipv6_entries),
-        }
-
-        # Write IPv4 aggregated
-        ipv4_agg_file = self.output_dir / "prefixes_ipv4_agg.csv"
-        with open(ipv4_agg_file, "w", newline="") as f:
-            writer = csv.writer(f)
-            for prefix, cc in sorted(
-                ipv4_agg_entries, key=lambda x: x[0].network_address
-            ):
-                writer.writerow([str(prefix), cc])
-
-        files_info["prefixes_ipv4_agg.csv"] = {
-            "path": str(ipv4_agg_file),
-            "size": ipv4_agg_file.stat().st_size,
-            "sha256": self._calculate_sha256(ipv4_agg_file),
-            "count": len(ipv4_agg_entries),
-        }
-
-        # Write IPv6 aggregated
-        ipv6_agg_file = self.output_dir / "prefixes_ipv6_agg.csv"
-        with open(ipv6_agg_file, "w", newline="") as f:
-            writer = csv.writer(f)
-            for prefix, cc in sorted(
-                ipv6_agg_entries, key=lambda x: x[0].network_address
-            ):
-                writer.writerow([str(prefix), cc])
-
-        files_info["prefixes_ipv6_agg.csv"] = {
-            "path": str(ipv6_agg_file),
-            "size": ipv6_agg_file.stat().st_size,
-            "sha256": self._calculate_sha256(ipv6_agg_file),
-            "count": len(ipv6_agg_entries),
-        }
-
-        print(f"  IPv4 raw: {len(ipv4_entries):,} prefixes")
-        print(f"  IPv6 raw: {len(ipv6_entries):,} prefixes")
-        print(f"  IPv4 aggregated: {len(ipv4_agg_entries):,} prefixes")
-        print(f"  IPv6 aggregated: {len(ipv6_agg_entries):,} prefixes")
-
-        return files_info
 
     def write_aggregated_csv_files(self, ipv4_agg_entries, ipv6_agg_entries):
         """Write only aggregated CSV files for performance."""

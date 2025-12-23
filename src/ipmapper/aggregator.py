@@ -7,48 +7,6 @@ from collections import defaultdict
 class PrefixAggregator:
     """Aggregates IP prefixes to minimize the number of entries."""
 
-    def __init__(self):
-        pass
-
-    def _can_aggregate(self, net1, net2):
-        """Check if two networks can be aggregated."""
-        try:
-            # Networks must be the same type (IPv4 or IPv6)
-            if type(net1) != type(net2):
-                return False
-
-            # Networks must have the same prefix length
-            if net1.prefixlen != net2.prefixlen:
-                return False
-
-            # Networks must be adjacent
-            if net1.prefixlen == 0:
-                return False
-
-            # Calculate the supernet
-            parent_prefixlen = net1.prefixlen - 1
-            net1_parent = net1.supernet(new_prefix=parent_prefixlen)
-            net2_parent = net2.supernet(new_prefix=parent_prefixlen)
-
-            # They can aggregate if they have the same parent and cover the entire parent
-            if net1_parent == net2_parent:
-                # Check if they're the two halves of the parent network
-                subnets = list(net1_parent.subnets(new_prefix=net1.prefixlen))
-                return set([net1, net2]) == set(subnets)
-
-            return False
-
-        except:
-            return False
-
-    def _aggregate_pair(self, net1, net2):
-        """Aggregate two networks into their supernet."""
-        if not self._can_aggregate(net1, net2):
-            return None
-
-        parent_prefixlen = net1.prefixlen - 1
-        return net1.supernet(new_prefix=parent_prefixlen)
-
     def aggregate_prefixes(self, prefix_cc_pairs):
         """Aggregate prefixes while preserving country code grouping.
 
