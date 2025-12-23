@@ -152,18 +152,32 @@ class OutputWriter:
             return []
         serialized = []
         for conflict in conflicts:
-            serialized.append({
-                "prefix": conflict["prefix"],
-                "entries": [
-                    (reg, cc, date.isoformat() if hasattr(date, "isoformat") else str(date))
-                    for reg, cc, date in conflict["entries"]
-                ],
-                "chosen": (
-                    conflict["chosen"][0],
-                    conflict["chosen"][1],
-                    conflict["chosen"][2].isoformat() if hasattr(conflict["chosen"][2], "isoformat") else str(conflict["chosen"][2])
-                ),
-            })
+            serialized.append(
+                {
+                    "prefix": conflict["prefix"],
+                    "entries": [
+                        (
+                            reg,
+                            cc,
+                            (
+                                date.isoformat()
+                                if hasattr(date, "isoformat")
+                                else str(date)
+                            ),
+                        )
+                        for reg, cc, date in conflict["entries"]
+                    ],
+                    "chosen": (
+                        conflict["chosen"][0],
+                        conflict["chosen"][1],
+                        (
+                            conflict["chosen"][2].isoformat()
+                            if hasattr(conflict["chosen"][2], "isoformat")
+                            else str(conflict["chosen"][2])
+                        ),
+                    ),
+                }
+            )
         return serialized
 
     def write_metadata(self, download_metadata, files_info, conflicts=None):
@@ -173,7 +187,7 @@ class OutputWriter:
         metadata = {
             "generated_timestamp": datetime.utcnow().isoformat() + "Z",
             "generator": "ipmapper",
-            "version": "1.0.1",
+            "version": "1.1.0",
             "license": "MIT",
             "description": "IP-to-country mapping derived from RIR delegated files",
             "sources": download_metadata.get("sources", {}),

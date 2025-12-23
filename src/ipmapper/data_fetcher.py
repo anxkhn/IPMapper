@@ -206,7 +206,11 @@ class DataFetcher:
                         print(f"\nFailed to download {rir_name.upper()}, skipping...")
                 except Exception as e:
                     print(f"\nError downloading {rir_name.upper()}: {e}")
-                    results[rir_name] = {"rir": rir_name, "status": "error", "error": str(e)}
+                    results[rir_name] = {
+                        "rir": rir_name,
+                        "status": "error",
+                        "error": str(e),
+                    }
 
         for rir_name in RIR_SOURCES:
             filepath = self.raw_dir / f"delegated-{rir_name}-extended-latest"

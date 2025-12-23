@@ -41,7 +41,15 @@ setuptools.setup(
             "ipmapper=ipmapper:main",
         ],
     },
-    keywords=["ip", "geolocation", "country", "currency", "rir", "offline", "radix-tree"],
+    keywords=[
+        "ip",
+        "geolocation",
+        "country",
+        "currency",
+        "rir",
+        "offline",
+        "radix-tree",
+    ],
     project_urls={
         "Homepage": "https://github.com/anxkhn/ipmapper",
         "Repository": "https://github.com/anxkhn/ipmapper",

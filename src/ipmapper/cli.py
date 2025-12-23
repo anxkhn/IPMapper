@@ -133,20 +133,28 @@ def lookup(ips, output_format, country_name, currency, data_dir):
         else:  # table
             if results:
                 headers = list(results[0].keys())
-                
+
                 # Simple table formatting without tabulate
-                col_widths = [max(len(h), max(len(str(result.get(h, ""))) for result in results)) for h in headers]
-                
+                col_widths = [
+                    max(len(h), max(len(str(result.get(h, ""))) for result in results))
+                    for h in headers
+                ]
+
                 # Header
-                header_line = " | ".join(h.ljust(w) for h, w in zip(headers, col_widths))
+                header_line = " | ".join(
+                    h.ljust(w) for h, w in zip(headers, col_widths)
+                )
                 separator = "-+-".join("-" * w for w in col_widths)
-                
+
                 click.echo(header_line)
                 click.echo(separator)
-                
+
                 # Rows
                 for result in results:
-                    row_line = " | ".join(str(result.get(h, "")).ljust(w) for h, w in zip(headers, col_widths))
+                    row_line = " | ".join(
+                        str(result.get(h, "")).ljust(w)
+                        for h, w in zip(headers, col_widths)
+                    )
                     click.echo(row_line)
             else:
                 click.echo("No results found.")
