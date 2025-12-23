@@ -321,7 +321,7 @@ This project will always remain free and open source because:
 
 ## Changelog
 
-### v1.1.0
+### v1.1.1
 
 - Parallel downloads using ThreadPoolExecutor (5 concurrent downloads)
 - Automatic retry with exponential backoff (3 retries)

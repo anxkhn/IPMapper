@@ -20,7 +20,7 @@ from .parser import RIRParser
 
 
 @click.group()
-@click.version_option(version="1.1.0")
+@click.version_option(version="1.1.1")
 def cli():
     """Fast offline IP-to-country lookup using RIR data."""
 
