@@ -33,8 +33,6 @@ def update(force, data_dir):
         aggregator = PrefixAggregator()
         writer = OutputWriter(fetcher.processed_dir)
 
-        # Download RIR data
-        click.echo("Downloading RIR delegated files...")
         download_metadata = fetcher.download_rir_data(force=force)
 
         # Parse all files
