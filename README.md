@@ -153,17 +153,17 @@ result = lookup_engine.lookup_full('8.8.8.8')
 
 ### Regional Internet Registries
 
-| RIR          | Region                          | Data Source                                                                                                   |
-| ------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **APNIC**    | Asia-Pacific                    | [delegated-apnic-extended-latest](https://ftp.apnic.net/stats/apnic/delegated-apnic-extended-latest)          |
-| **ARIN**     | North America                   | [delegated-arin-extended-latest](https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest)          |
-| **RIPE NCC** | Europe/Middle East/Central Asia | [delegated-ripencc-extended-latest](https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-extended-latest) |
-| **LACNIC**   | Latin America/Caribbean         | [delegated-lacnic-extended-latest](https://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-extended-latest)  |
-| **AFRINIC**  | Africa                          | [delegated-afrinic-extended-latest](https://ftp.afrinic.net/stats/afrinic/delegated-afrinic-extended-latest)  |
+| RIR          | Region                          | Primary Source  | Fallback Mirrors              |
+| ------------ | ------------------------------- | --------------- | ----------------------------- |
+| **APNIC**    | Asia-Pacific                    | ftp.apnic.net   | ftp.ripe.net                  |
+| **ARIN**     | North America                   | ftp.arin.net    | ftp.ripe.net, ftp.apnic.net   |
+| **RIPE NCC** | Europe/Middle East/Central Asia | ftp.ripe.net    | ftp.apnic.net, ftp.lacnic.net |
+| **LACNIC**   | Latin America/Caribbean         | ftp.lacnic.net  | ftp.ripe.net                  |
+| **AFRINIC**  | Africa                          | ftp.afrinic.net | ftp.ripe.net, ftp.apnic.net   |
 
 ### Processing Pipeline
 
-1. **Download**: Fetch latest delegated files from all 5 RIRs
+1. **Download**: Fetch latest delegated files from all 5 RIRs in parallel
 2. **Parse**: Extract IPv4/IPv6 allocations with country codes
    - Filter for `allocated` and `assigned` status only
    - Convert IPv4 address counts to CIDR blocks
@@ -318,6 +318,25 @@ This project will always remain free and open source because:
 <td>No ongoing infrastructure costs or API maintenance requirements</td>
 </tr>
 </table>
+
+## Changelog
+
+### v1.1.0
+
+- Parallel downloads using ThreadPoolExecutor (5 concurrent downloads)
+- Automatic retry with exponential backoff (3 retries)
+- Resume support for interrupted downloads via HTTP Range headers
+- Fallback URLs for all 5 RIRs with multiple mirrors
+- Fixed JSON serialization error for date objects in metadata
+- Removed duplicate log messages
+- Code cleanup and comment removal
+
+### v1.0.1
+
+- Initial public release
+- Radix tree-based IP lookup
+- CIDR prefix aggregation
+- IPv4 and IPv6 support
 
 ## License
 

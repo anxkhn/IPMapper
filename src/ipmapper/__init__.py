@@ -5,7 +5,7 @@ This library provides IP-to-country mapping using data from Regional Internet Re
 It supports both IPv4 and IPv6 lookups with country names and currency information.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 from .lookup import (
     lookup,
