@@ -18,7 +18,6 @@ class PrefixAggregator:
         """
         print("Aggregating prefixes...")
 
-        # Group by country code and IP version
         groups = defaultdict(lambda: defaultdict(list))
 
         for prefix, cc in prefix_cc_pairs:
@@ -35,21 +34,33 @@ class PrefixAggregator:
                 processed += 1
                 if processed % 10 == 0 or processed == total_groups:
                     print(
-                        f"  Processing group {processed}/{total_groups} ({cc} {ip_version})"
+                        "  Processing group "
+                        + str(processed)
+                        + "/"
+                        + str(total_groups)
+                        + " ("
+                        + cc
+                        + " "
+                        + ip_version
+                        + ")"
                     )
 
-                # Use ipaddress.collapse_addresses for efficient aggregation
                 try:
                     collapsed = list(ipaddress.collapse_addresses(prefixes))
                     for prefix in collapsed:
                         aggregated_pairs.append((prefix, cc))
-                except Exception as e:
-                    # Fallback to original prefixes if aggregation fails
-                    print(f"  Warning: Aggregation failed for {cc} {ip_version}: {e}")
+                except (ValueError, TypeError) as e:
+                    print(
+                        "  Warning: Aggregation failed for "
+                        + cc
+                        + " "
+                        + ip_version
+                        + ": "
+                        + str(e)
+                    )
                     for prefix in prefixes:
                         aggregated_pairs.append((prefix, cc))
 
-        # Sort final result
         aggregated_pairs.sort(key=lambda x: (str(type(x[0])), x[0].network_address))
 
         reduction = (
@@ -58,18 +69,18 @@ class PrefixAggregator:
             else 0
         )
         print(
-            f"  Aggregated {original_count:,} -> {len(aggregated_pairs):,} prefixes "
-            f"({reduction:.1f}% reduction)"
+            "  Aggregated "
+            + str(original_count)
+            + " -> "
+            + str(len(aggregated_pairs))
+            + " prefixes ("
+            + f"{reduction:.1f}"
+            + "% reduction)"
         )
 
         return aggregated_pairs
 
     def aggregate_entries(self, entries):
         """Aggregate RIR entries by converting to prefix-CC pairs first."""
-        # Convert entries to (prefix, cc) pairs
         prefix_cc_pairs = [(entry.prefix, entry.cc) for entry in entries]
-
-        # Aggregate
-        aggregated_pairs = self.aggregate_prefixes(prefix_cc_pairs)
-
-        return aggregated_pairs
+        return self.aggregate_prefixes(prefix_cc_pairs)

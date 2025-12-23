@@ -1,10 +1,11 @@
 """Fast IP lookup using radix trees."""
 
-import ipaddress
 import csv
+import ipaddress
 import json
 from pathlib import Path
-from .countries import get_country_name, get_country_currency, get_country_info
+
+from .countries import get_country_info
 
 
 class RadixNode:
@@ -30,16 +31,13 @@ class RadixNode:
 
     def lookup(self, ip_bits, depth=0):
         """Look up an IP address in the radix tree."""
-        # Check if current node has data (longest prefix match so far)
         best_match = self.data if self.is_terminal else None
 
-        # If we've exhausted the IP bits or have no children, return best match
         if depth >= len(ip_bits) or not self.children:
             return best_match
 
         bit = ip_bits[depth]
         if bit in self.children:
-            # Continue down the tree
             child_result = self.children[bit].lookup(ip_bits, depth + 1)
             return child_result if child_result is not None else best_match
 
@@ -69,15 +67,14 @@ class IPLookup:
         if isinstance(ip, str):
             try:
                 ip = ipaddress.ip_address(ip)
-            except ValueError:
-                raise ValueError(f"Invalid IP address: {ip}")
+            except ValueError as exc:
+                raise ValueError(f"Invalid IP address: {ip}") from exc
 
         if isinstance(ip, ipaddress.IPv4Address):
             return format(int(ip), "032b")
-        elif isinstance(ip, ipaddress.IPv6Address):
+        if isinstance(ip, ipaddress.IPv6Address):
             return format(int(ip), "0128b")
-        else:
-            raise ValueError(f"Unsupported IP type: {type(ip)}")
+        raise ValueError(f"Unsupported IP type: {type(ip)}")
 
     def _prefix_to_bits(self, prefix):
         """Convert IP prefix to binary string of the network portion."""
@@ -95,26 +92,30 @@ class IPLookup:
 
     def load_data(self):
         """Load processed data into radix trees."""
-        # Always use aggregated data for performance
         ipv4_file = self.data_dir / "prefixes_ipv4_agg.csv"
         ipv6_file = self.data_dir / "prefixes_ipv6_agg.csv"
         metadata_file = self.data_dir / "metadata.json"
 
-        # Check if files exist
         if not ipv4_file.exists() or not ipv6_file.exists():
             print(
-                f"Data files not found in {self.data_dir}. Run 'ipmapper update' to download and process data."
+                f"Data files not found in {self.data_dir}. "
+                "Run 'ipmapper update' to download and process data."
             )
             return False
 
-        # Load metadata
         if metadata_file.exists():
-            with open(metadata_file) as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 self.metadata = json.load(f)
 
-        # Load IPv4 data
-        ipv4_count = 0
-        with open(ipv4_file, "r") as f:
+        self._load_ipv4_data(ipv4_file)
+        self._load_ipv6_data(ipv6_file)
+
+        self.loaded = True
+        return True
+
+    def _load_ipv4_data(self, ipv4_file):
+        """Load IPv4 prefix data from CSV file."""
+        with open(ipv4_file, "r", encoding="utf-8") as f:
             reader = csv.reader(f)
             for row in reader:
                 if len(row) >= 2:
@@ -123,13 +124,12 @@ class IPLookup:
                         prefix = ipaddress.IPv4Network(prefix_str)
                         prefix_bits = self._prefix_to_bits(prefix)
                         self.ipv4_tree.insert(prefix_bits, country_code.upper())
-                        ipv4_count += 1
-                    except Exception as e:
-                        print(f"Warning: Failed to load IPv4 prefix {prefix_str}: {e}")
+                    except (ValueError, TypeError) as e:
+                        print(f"Warning: Failed to load IPv4 {prefix_str}: {e}")
 
-        # Load IPv6 data
-        ipv6_count = 0
-        with open(ipv6_file, "r") as f:
+    def _load_ipv6_data(self, ipv6_file):
+        """Load IPv6 prefix data from CSV file."""
+        with open(ipv6_file, "r", encoding="utf-8") as f:
             reader = csv.reader(f)
             for row in reader:
                 if len(row) >= 2:
@@ -138,12 +138,8 @@ class IPLookup:
                         prefix = ipaddress.IPv6Network(prefix_str)
                         prefix_bits = self._prefix_to_bits(prefix)
                         self.ipv6_tree.insert(prefix_bits, country_code.upper())
-                        ipv6_count += 1
-                    except Exception as e:
-                        print(f"Warning: Failed to load IPv6 prefix {prefix_str}: {e}")
-
-        self.loaded = True
-        return True
+                    except (ValueError, TypeError) as e:
+                        print(f"Warning: Failed to load IPv6 {prefix_str}: {e}")
 
     def lookup_ip(self, ip, ip_version=None):
         """Look up country code for an IP address."""
@@ -159,20 +155,17 @@ class IPLookup:
 
         ip_bits = self._ip_to_bits(ip_obj)
 
-        # Optimize lookup by using ip_version hint
         if ip_version == "ipv4" or (
             ip_version is None and isinstance(ip_obj, ipaddress.IPv4Address)
         ):
-            result = self.ipv4_tree.lookup(ip_bits)
-        elif ip_version == "ipv6" or (
+            return self.ipv4_tree.lookup(ip_bits)
+        if ip_version == "ipv6" or (
             ip_version is None and isinstance(ip_obj, ipaddress.IPv6Address)
         ):
-            result = self.ipv6_tree.lookup(ip_bits)
-        else:
-            print(f"Invalid IP version hint: {ip_version}")
-            return None
+            return self.ipv6_tree.lookup(ip_bits)
 
-        return result
+        print(f"Invalid IP version hint: {ip_version}")
+        return None
 
     def lookup_full(self, ip, ip_version=None):
         """Look up complete information for an IP address."""
@@ -193,15 +186,15 @@ class IPLookup:
         }
 
 
-_global_lookup = None
+_GLOBAL_LOOKUP = None
 
 
 def get_lookup():
     """Get or create global lookup instance."""
-    global _global_lookup
-    if _global_lookup is None:
-        _global_lookup = IPLookup()
-    return _global_lookup
+    global _GLOBAL_LOOKUP  # pylint: disable=global-statement
+    if _GLOBAL_LOOKUP is None:
+        _GLOBAL_LOOKUP = IPLookup()
+    return _GLOBAL_LOOKUP
 
 
 def lookup(ip, ip_version=None):
@@ -209,19 +202,19 @@ def lookup(ip, ip_version=None):
     return get_lookup().lookup_full(ip, ip_version)
 
 
-def get_country_name(ip, ip_version=None):
+def get_country_name_for_ip(ip, ip_version=None):
     """Get country name for an IP address."""
     result = get_lookup().lookup_full(ip, ip_version)
     return result.get("country_name") if result else None
 
 
-def get_country_code(ip, ip_version=None):
+def get_country_code_for_ip(ip, ip_version=None):
     """Get country code for an IP address."""
     result = get_lookup().lookup_full(ip, ip_version)
     return result.get("country_code") if result else None
 
 
-def get_country_currency(ip, ip_version=None):
+def get_country_currency_for_ip(ip, ip_version=None):
     """Get currency for an IP address."""
     result = get_lookup().lookup_full(ip, ip_version)
     return result.get("currency") if result else None

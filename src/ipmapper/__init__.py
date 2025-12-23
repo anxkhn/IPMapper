@@ -1,28 +1,29 @@
 """
 Fast offline IP-to-country lookup using RIR data.
 
-This library provides IP-to-country mapping using data from Regional Internet Registries (RIRs).
-It supports both IPv4 and IPv6 lookups with country names and currency information.
+This library provides IP-to-country mapping using data from
+Regional Internet Registries (RIRs). It supports both IPv4 and
+IPv6 lookups with country names and currency information.
 """
 
 __version__ = "1.1.0"
 
+from .countries import get_country_info
 from .lookup import (
-    lookup,
-    get_country_name,
-    get_country_code,
-    get_country_currency,
     IPLookup,
+    get_country_code_for_ip,
+    get_country_currency_for_ip,
+    get_country_name_for_ip,
     ipv4_lookup,
     ipv6_lookup,
+    lookup,
 )
-from .countries import get_country_info
 
 __all__ = [
     "lookup",
-    "get_country_name",
-    "get_country_code",
-    "get_country_currency",
+    "get_country_name_for_ip",
+    "get_country_code_for_ip",
+    "get_country_currency_for_ip",
     "get_country_info",
     "IPLookup",
     "ipv4_lookup",
@@ -32,6 +33,6 @@ __all__ = [
 
 def main():
     """Entry point for the CLI."""
-    from .cli import cli
+    from .cli import cli  # pylint: disable=import-outside-toplevel
 
     cli()

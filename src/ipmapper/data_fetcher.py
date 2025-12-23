@@ -1,17 +1,16 @@
 """Data fetcher for downloading RIR delegated files."""
 
-import json
 import hashlib
+import json
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
 from tqdm import tqdm
-
+from urllib3.util import Retry
 
 RIR_SOURCES = {
     "apnic": [
@@ -38,6 +37,15 @@ RIR_SOURCES = {
         "https://ftp.apnic.net/stats/afrinic/delegated-afrinic-extended-latest",
     ],
 }
+
+
+def calculate_sha256(filepath):
+    """Calculate SHA256 hash of a file."""
+    hash_sha256 = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_sha256.update(chunk)
+    return hash_sha256.hexdigest()
 
 
 class DataFetcher:
@@ -123,10 +131,10 @@ class DataFetcher:
 
             return True
 
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             if filepath.exists() and mode == "wb":
                 filepath.unlink()
-            raise e
+            raise
 
     def _download_single(self, session, rir_name, urls, filepath, force=False):
         """Download a single RIR file with fallback support."""
@@ -134,17 +142,17 @@ class DataFetcher:
             return {
                 "rir": rir_name,
                 "status": "skipped",
-                "message": f"{rir_name.upper()} data already exists",
+                "message": rir_name.upper() + " data already exists",
             }
 
         last_error = None
         for try_url in urls:
             try:
                 self._download_file(
-                    session, try_url, filepath, f"Downloading {rir_name.upper()}"
+                    session, try_url, filepath, "Downloading " + rir_name.upper()
                 )
                 return {"rir": rir_name, "status": "success", "url": try_url}
-            except Exception as e:
+            except requests.exceptions.RequestException as e:
                 last_error = e
                 if filepath.exists():
                     filepath.unlink()
@@ -155,14 +163,6 @@ class DataFetcher:
             "status": "failed",
             "error": str(last_error),
         }
-
-    def _calculate_sha256(self, filepath):
-        """Calculate SHA256 hash of a file."""
-        hash_sha256 = hashlib.sha256()
-        with open(filepath, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_sha256.update(chunk)
-        return hash_sha256.hexdigest()
 
     def download_rir_data(self, force=False):
         """Download all RIR delegated files in parallel.
@@ -200,49 +200,52 @@ class DataFetcher:
                     results[rir_name] = result
 
                     if result["status"] == "skipped":
-                        print(f"\n{result['message']}, skipping...")
+                        print("\n" + result["message"] + ", skipping...")
                     elif result["status"] == "failed":
-                        print(f"\nFailed to download {rir_name.upper()}, skipping...")
-                except Exception as e:
-                    print(f"\nError downloading {rir_name.upper()}: {e}")
+                        print(
+                            "\nFailed to download " + rir_name.upper() + ", skipping..."
+                        )
+                except requests.exceptions.RequestException as e:
+                    print("\nError downloading " + rir_name.upper() + ": " + str(e))
                     results[rir_name] = {
                         "rir": rir_name,
                         "status": "error",
                         "error": str(e),
                     }
 
-        for rir_name in RIR_SOURCES:
+        for rir_name, rir_urls in RIR_SOURCES.items():
             filepath = self.raw_dir / f"delegated-{rir_name}-extended-latest"
             if not filepath.exists():
                 continue
 
             file_size = filepath.stat().st_size
-            file_hash = self._calculate_sha256(filepath)
+            file_hash = calculate_sha256(filepath)
 
             metadata["sources"][rir_name] = {
-                "url": RIR_SOURCES[rir_name][0],
+                "url": rir_urls[0],
                 "file_path": str(filepath),
                 "file_size": file_size,
                 "sha256": file_hash,
             }
 
+            hash_preview = file_hash[:16]
             print(
-                f"  {rir_name.upper()}: {file_size:,} bytes (SHA256: {file_hash[:16]}...)"
+                f"  {rir_name.upper()}: {file_size:,} bytes (SHA256: {hash_preview}...)"
             )
 
         metadata_file = self.data_dir / "download_metadata.json"
-        with open(metadata_file, "w") as f:
+        with open(metadata_file, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
 
-        print(f"\nAll RIR data downloaded successfully")
-        print(f"Data stored in: {self.data_dir}")
+        print("\nAll RIR data downloaded successfully")
+        print("Data stored in: " + str(self.data_dir))
 
         return metadata
 
     def get_data_files(self):
         """Get paths to all downloaded RIR files."""
         files = {}
-        for rir_name in RIR_SOURCES.keys():
+        for rir_name in RIR_SOURCES:
             filepath = self.raw_dir / f"delegated-{rir_name}-extended-latest"
             if filepath.exists():
                 files[rir_name] = filepath
@@ -257,7 +260,7 @@ class DataFetcher:
         """Get download metadata if available."""
         metadata_file = self.data_dir / "download_metadata.json"
         if metadata_file.exists():
-            with open(metadata_file) as f:
+            with open(metadata_file, encoding="utf-8") as f:
                 return json.load(f)
         return None
 
@@ -266,6 +269,6 @@ class DataFetcher:
         if self.raw_dir.exists():
             try:
                 shutil.rmtree(self.raw_dir)
-                print(f"Cleaned up raw data directory: {self.raw_dir}")
-            except Exception as e:
-                print(f"Warning: Failed to cleanup raw data: {e}")
+                print("Cleaned up raw data directory: " + str(self.raw_dir))
+            except OSError as e:
+                print("Warning: Failed to cleanup raw data: " + str(e))

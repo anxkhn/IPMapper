@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import setuptools
 from pathlib import Path
+
+import setuptools
 
 # Read the contents of README file
 this_directory = Path(__file__).parent

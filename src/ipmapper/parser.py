@@ -1,12 +1,10 @@
 """Parser for RIR delegated files."""
 
 import ipaddress
-from datetime import datetime
-from collections import defaultdict, namedtuple
 import warnings
+from collections import defaultdict, namedtuple
+from datetime import datetime
 
-
-# Named tuple for parsed entries
 RIREntry = namedtuple(
     "RIREntry", ["registry", "cc", "type", "start", "value", "date", "status", "prefix"]
 )
@@ -30,7 +28,6 @@ class RIRParser:
             current = start_int
 
             while current <= end_int:
-                # Find the largest block that fits
                 max_block_size = 1
                 while (
                     current % (max_block_size * 2) == 0
@@ -38,7 +35,6 @@ class RIRParser:
                 ):
                     max_block_size *= 2
 
-                # Convert to CIDR
                 prefix_len = 32 - (max_block_size - 1).bit_length()
                 if max_block_size == 1:
                     prefix_len = 32
@@ -51,15 +47,25 @@ class RIRParser:
 
             return cidrs
 
-        except Exception as e:
-            print(f"Error converting IPv4 {start_ip}/{count}: {e}")
+        except (ValueError, TypeError) as e:
+            print(
+                "Error converting IPv4 " + start_ip + "/" + str(count) + ": " + str(e)
+            )
             return []
+
+    def _parse_date(self, date_field):
+        """Parse date field from RIR file."""
+        try:
+            if date_field and date_field.isdigit():
+                return datetime.strptime(date_field, "%Y%m%d").date()
+            return datetime(1900, 1, 1).date()
+        except ValueError:
+            return datetime(1900, 1, 1).date()
 
     def _parse_line(self, line, registry):
         """Parse a single line from RIR file."""
         line = line.strip()
 
-        # Skip comments and empty lines
         if not line or line.startswith("#"):
             return None
 
@@ -67,29 +73,22 @@ class RIRParser:
         if len(parts) < 7:
             return None
 
-        registry_field, cc, type_field, start, value, date_field, status = parts[:7]
+        _, cc, type_field, start, value, date_field, status = parts[:7]
 
-        # Filter by type and status
         if type_field not in self.valid_types or status not in self.valid_statuses:
             return None
 
-        # Parse date
-        try:
-            if date_field and date_field.isdigit():
-                date = datetime.strptime(date_field, "%Y%m%d").date()
-            else:
-                date = datetime(1900, 1, 1).date()  # Default for missing dates
-        except Exception:
-            date = datetime(1900, 1, 1).date()
+        date = self._parse_date(date_field)
 
-        # Convert to network prefixes
         prefixes = []
         if type_field == "ipv4":
             try:
                 count = int(value)
                 prefixes = self._ipv4_to_cidrs(start, count)
-            except Exception as e:
-                warnings.warn(f"Failed to parse IPv4 {start}/{value}: {e}")
+            except ValueError as e:
+                warnings.warn(
+                    "Failed to parse IPv4 " + start + "/" + value + ": " + str(e)
+                )
                 return None
 
         elif type_field == "ipv6":
@@ -97,11 +96,12 @@ class RIRParser:
                 prefix_len = int(value)
                 prefix = ipaddress.IPv6Network(f"{start}/{prefix_len}")
                 prefixes = [prefix]
-            except Exception as e:
-                warnings.warn(f"Failed to parse IPv6 {start}/{value}: {e}")
+            except ValueError as e:
+                warnings.warn(
+                    "Failed to parse IPv6 " + start + "/" + value + ": " + str(e)
+                )
                 return None
 
-        # Create entries for each prefix
         entries = []
         for prefix in prefixes:
             entry = RIREntry(
@@ -122,7 +122,7 @@ class RIRParser:
         """Parse an RIR delegated file."""
         entries = []
 
-        print(f"Parsing {registry.upper()} file...")
+        print("Parsing " + registry.upper() + " file...")
 
         try:
             with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
@@ -131,17 +131,22 @@ class RIRParser:
                         parsed_entries = self._parse_line(line, registry)
                         if parsed_entries:
                             entries.extend(parsed_entries)
-                    except Exception as e:
+                    except ValueError as e:
                         warnings.warn(
-                            f"Error parsing line {line_num} in {registry}: {e}"
+                            "Error parsing line "
+                            + str(line_num)
+                            + " in "
+                            + registry
+                            + ": "
+                            + str(e)
                         )
                         continue
 
-        except Exception as e:
-            print(f"Failed to parse file {filepath}: {e}")
+        except OSError as e:
+            print("Failed to parse file " + str(filepath) + ": " + str(e))
             return []
 
-        print(f"  Parsed {len(entries)} entries from {registry.upper()}")
+        print("  Parsed " + str(len(entries)) + " entries from " + registry.upper())
         return entries
 
     def parse_all_files(self, rir_files):
@@ -152,14 +157,13 @@ class RIRParser:
             entries = self.parse_file(filepath, registry)
             all_entries.extend(entries)
 
-        print(f"\nTotal parsed entries: {len(all_entries)}")
+        print("\nTotal parsed entries: " + str(len(all_entries)))
         return all_entries
 
     def deduplicate_entries(self, entries):
         """Deduplicate overlapping entries."""
         print("Deduplicating entries...")
 
-        # Group by prefix for deduplication
         prefix_groups = defaultdict(list)
         for entry in entries:
             prefix_groups[entry.prefix].append(entry)
@@ -171,14 +175,11 @@ class RIRParser:
             if len(group) == 1:
                 deduplicated.append(group[0])
             else:
-                # Multiple entries for same prefix - resolve conflict
-                # Sort by date (newest first), then by registry name for determinism
                 sorted_group = sorted(
                     group, key=lambda x: (x.date, x.registry), reverse=True
                 )
 
-                # Check if country codes differ
-                country_codes = set(entry.cc for entry in group)
+                country_codes = {entry.cc for entry in group}
                 if len(country_codes) > 1:
                     conflicts.append(
                         {
@@ -196,16 +197,23 @@ class RIRParser:
 
         if conflicts:
             print(
-                f"  Resolved {len(conflicts)} conflicts (chose most recent/lexicographically first)"
+                "  Resolved "
+                + str(len(conflicts))
+                + " conflicts (chose most recent/lexicographically first)"
             )
-            for conflict in conflicts[:5]:  # Show first 5 conflicts
+            for conflict in conflicts[:5]:
                 print(
-                    f"    {conflict['prefix']}: {conflict['entries']} -> {conflict['chosen']}"
+                    "    "
+                    + conflict["prefix"]
+                    + ": "
+                    + str(conflict["entries"])
+                    + " -> "
+                    + str(conflict["chosen"])
                 )
             if len(conflicts) > 5:
-                print(f"    ... and {len(conflicts) - 5} more")
+                print("    ... and " + str(len(conflicts) - 5) + " more")
 
-        print(f"  Deduplicated to {len(deduplicated)} unique entries")
+        print("  Deduplicated to " + str(len(deduplicated)) + " unique entries")
         return deduplicated, conflicts
 
     def separate_by_type(self, entries):
@@ -213,7 +221,7 @@ class RIRParser:
         ipv4_entries = [e for e in entries if e.type == "ipv4"]
         ipv6_entries = [e for e in entries if e.type == "ipv6"]
 
-        print(f"  IPv4 entries: {len(ipv4_entries)}")
-        print(f"  IPv6 entries: {len(ipv6_entries)}")
+        print("  IPv4 entries: " + str(len(ipv4_entries)))
+        print("  IPv6 entries: " + str(len(ipv6_entries)))
 
         return ipv4_entries, ipv6_entries

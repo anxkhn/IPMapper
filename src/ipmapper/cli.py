@@ -1,22 +1,28 @@
 """Command-line interface for ipmapper."""
 
+import json
 import sys
 import time
-import click
 from pathlib import Path
 
-from .data_fetcher import DataFetcher
-from .parser import RIRParser
+import click
+
 from .aggregator import PrefixAggregator
+from .data_fetcher import DataFetcher
+from .lookup import (
+    IPLookup,
+    get_country_code_for_ip,
+    get_country_currency_for_ip,
+    get_country_name_for_ip,
+)
 from .output_writer import OutputWriter
-from .lookup import IPLookup, lookup
+from .parser import RIRParser
 
 
 @click.group()
 @click.version_option(version="1.1.0")
 def cli():
     """Fast offline IP-to-country lookup using RIR data."""
-    pass
 
 
 @cli.command()
@@ -27,7 +33,6 @@ def update(force, data_dir):
     try:
         start_time = time.time()
 
-        # Initialize components
         fetcher = DataFetcher(data_dir)
         parser = RIRParser()
         aggregator = PrefixAggregator()
@@ -35,36 +40,28 @@ def update(force, data_dir):
 
         download_metadata = fetcher.download_rir_data(force=force)
 
-        # Parse all files
         click.echo("\nParsing RIR files...")
         rir_files = fetcher.get_data_files()
         all_entries = parser.parse_all_files(rir_files)
 
-        # Deduplicate
         deduplicated_entries, conflicts = parser.deduplicate_entries(all_entries)
 
-        # Separate by IP version
         ipv4_entries, ipv6_entries = parser.separate_by_type(deduplicated_entries)
 
-        # Aggregate for optimization
         click.echo("\nAggregating prefixes...")
         ipv4_agg = aggregator.aggregate_entries(ipv4_entries)
         ipv6_agg = aggregator.aggregate_entries(ipv6_entries)
 
-        # Separate aggregated by type
         ipv4_agg_entries = [(p, cc) for p, cc in ipv4_agg if p.version == 4]
         ipv6_agg_entries = [(p, cc) for p, cc in ipv6_agg if p.version == 6]
 
-        # Write output files (only aggregated for performance)
         click.echo("\nWriting output files...")
         files_info = writer.write_aggregated_csv_files(
             ipv4_agg_entries, ipv6_agg_entries
         )
 
-        # Write metadata
-        metadata = writer.write_metadata(download_metadata, files_info, conflicts)
+        writer.write_metadata(download_metadata, files_info, conflicts)
 
-        # Cleanup raw data to save space
         click.echo("Cleaning up raw data...")
         fetcher.cleanup_raw_data()
 
@@ -73,12 +70,12 @@ def update(force, data_dir):
         click.echo(f"\nUpdate completed in {elapsed:.1f}s")
         click.echo(f"Data directory: {fetcher.data_dir}")
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
-@cli.command()
+@cli.command(name="lookup")
 @click.argument("ips", nargs=-1, required=True)
 @click.option(
     "--format",
@@ -90,10 +87,9 @@ def update(force, data_dir):
 @click.option("--country-name", is_flag=True, help="Include country names")
 @click.option("--currency", is_flag=True, help="Include currency codes")
 @click.option("--data-dir", type=click.Path(), help="Custom data directory")
-def lookup(ips, output_format, country_name, currency, data_dir):
+def lookup_cmd(ips, output_format, country_name, currency, data_dir):
     """Look up country information for IP addresses."""
     try:
-        # Initialize lookup
         if data_dir:
             lookup_engine = IPLookup(Path(data_dir) / "processed")
         else:
@@ -103,65 +99,69 @@ def lookup(ips, output_format, country_name, currency, data_dir):
         for ip in ips:
             try:
                 result = lookup_engine.lookup_full(ip)
-
-                # Filter fields based on options
-                filtered_result = {"ip": result["ip"]}
-                filtered_result["country_code"] = result["country_code"]
-
+                filtered_result = {
+                    "ip": result["ip"],
+                    "country_code": result["country_code"],
+                }
                 if country_name:
                     filtered_result["country_name"] = result["country_name"]
                 if currency:
                     filtered_result["currency"] = result["currency"]
-
                 results.append(filtered_result)
-
-            except Exception as e:
+            except ValueError as e:
                 click.echo(f"Error looking up {ip}: {e}", err=True)
                 continue
 
-        # Output results
-        if output_format == "json":
-            import json
+        _output_results(results, output_format)
 
-            click.echo(json.dumps(results, indent=2))
-        elif output_format == "csv":
-            if results:
-                headers = list(results[0].keys())
-                click.echo(",".join(headers))
-                for result in results:
-                    click.echo(",".join(str(result.get(h, "")) for h in headers))
-        else:  # table
-            if results:
-                headers = list(results[0].keys())
-
-                # Simple table formatting without tabulate
-                col_widths = [
-                    max(len(h), max(len(str(result.get(h, ""))) for result in results))
-                    for h in headers
-                ]
-
-                # Header
-                header_line = " | ".join(
-                    h.ljust(w) for h, w in zip(headers, col_widths)
-                )
-                separator = "-+-".join("-" * w for w in col_widths)
-
-                click.echo(header_line)
-                click.echo(separator)
-
-                # Rows
-                for result in results:
-                    row_line = " | ".join(
-                        str(result.get(h, "")).ljust(w)
-                        for h, w in zip(headers, col_widths)
-                    )
-                    click.echo(row_line)
-            else:
-                click.echo("No results found.")
-
-    except Exception as e:
+    except (OSError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+
+
+def _output_results(results, output_format):
+    """Output results in the specified format."""
+    if output_format == "json":
+        click.echo(json.dumps(results, indent=2))
+    elif output_format == "csv":
+        _output_csv(results)
+    else:
+        _output_table(results)
+
+
+def _output_csv(results):
+    """Output results in CSV format."""
+    if results:
+        headers = list(results[0].keys())
+        click.echo(",".join(headers))
+        for result in results:
+            row = ",".join(str(result.get(h, "")) for h in headers)
+            click.echo(row)
+
+
+def _output_table(results):
+    """Output results in table format."""
+    if not results:
+        click.echo("No results found.")
+        return
+
+    headers = list(results[0].keys())
+    col_widths = []
+    for h in headers:
+        max_val_len = max(len(str(result.get(h, ""))) for result in results)
+        col_widths.append(max(len(h), max_val_len))
+
+    header_line = " | ".join(h.ljust(w) for h, w in zip(headers, col_widths))
+    separator = "-+-".join("-" * w for w in col_widths)
+
+    click.echo(header_line)
+    click.echo(separator)
+
+    for result in results:
+        row_line = " | ".join(
+            str(result.get(h, "")).ljust(w) for h, w in zip(headers, col_widths)
+        )
+        click.echo(row_line)
 
 
 @cli.command()
@@ -174,11 +174,10 @@ def status(data_dir):
         click.echo("IPMap Status")
         click.echo("=" * 50)
 
-        # Check data directory
         click.echo(f"Data directory: {fetcher.data_dir}")
-        click.echo(f"Directory exists: {'Yes' if fetcher.data_dir.exists() else 'No'}")
+        exists_str = "Yes" if fetcher.data_dir.exists() else "No"
+        click.echo(f"Directory exists: {exists_str}")
 
-        # Check processed data
         processed_dir = fetcher.processed_dir
         processed_files = [
             "prefixes_ipv4_agg.csv",
@@ -186,7 +185,7 @@ def status(data_dir):
             "metadata.json",
         ]
 
-        click.echo(f"\nProcessed files:")
+        click.echo("\nProcessed files:")
         for filename in processed_files:
             filepath = processed_dir / filename
             if filepath.exists():
@@ -195,19 +194,16 @@ def status(data_dir):
             else:
                 click.echo(f"  [MISSING] {filename}: missing")
 
-        # Check metadata
         metadata = fetcher.get_metadata()
         if metadata:
-            click.echo(
-                f"\nLast update: {metadata.get('download_timestamp', 'Unknown')}"
-            )
+            timestamp = metadata.get("download_timestamp", "Unknown")
+            click.echo(f"\nLast update: {timestamp}")
         else:
             click.echo("\nNo metadata found.")
 
-        # Recommendations
-        click.echo("\nRecommendation: Run 'ipmapper update' to download/process data")
+        click.echo("\nRun 'ipmapper update' to download/process data")
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -217,39 +213,33 @@ def status(data_dir):
 def country(ip):
     """Get country name for an IP address."""
     try:
-        from .lookup import get_country_name
-
-        result = get_country_name(ip)
+        result = get_country_name_for_ip(ip)
         click.echo(result or "Unknown")
-    except Exception as e:
+    except ValueError as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
 @cli.command(name="country_code")
 @click.argument("ip")
-def country_code(ip):
+def country_code_cmd(ip):
     """Get country code for an IP address."""
     try:
-        from .lookup import get_country_code
-
-        result = get_country_code(ip)
+        result = get_country_code_for_ip(ip)
         click.echo(result or "Unknown")
-    except Exception as e:
+    except ValueError as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
-@cli.command()
+@cli.command(name="currency")
 @click.argument("ip")
-def currency(ip):
+def currency_cmd(ip):
     """Get currency for an IP address (shortcut)."""
     try:
-        from .lookup import get_country_currency
-
-        result = get_country_currency(ip)
+        result = get_country_currency_for_ip(ip)
         click.echo(result or "Unknown")
-    except Exception as e:
+    except ValueError as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
