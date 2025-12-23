@@ -7,7 +7,6 @@ It supports both IPv4 and IPv6 lookups with country names and currency informati
 
 __version__ = "1.0.1"
 
-# Import main lookup functions for easy access
 from .lookup import (
     lookup,
     get_country_name,
@@ -19,7 +18,6 @@ from .lookup import (
 )
 from .countries import get_country_info
 
-# Export main interface
 __all__ = [
     "lookup",
     "get_country_name",

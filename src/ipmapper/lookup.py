@@ -11,8 +11,8 @@ class RadixNode:
     """Node in a radix tree for IP prefix lookups."""
 
     def __init__(self):
-        self.children = {}  # bit -> child node
-        self.data = None  # country code if this is a terminal node
+        self.children = {}
+        self.data = None
         self.is_terminal = False
 
     def insert(self, prefix_bits, country_code, depth=0):
@@ -193,7 +193,6 @@ class IPLookup:
         }
 
 
-# Global lookup instance for convenience
 _global_lookup = None
 
 
