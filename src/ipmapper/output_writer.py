@@ -146,6 +146,26 @@ class OutputWriter:
 
         return files_info
 
+    def _serialize_conflicts(self, conflicts):
+        """Convert datetime.date objects to ISO strings for JSON serialization."""
+        if not conflicts:
+            return []
+        serialized = []
+        for conflict in conflicts:
+            serialized.append({
+                "prefix": conflict["prefix"],
+                "entries": [
+                    (reg, cc, date.isoformat() if hasattr(date, "isoformat") else str(date))
+                    for reg, cc, date in conflict["entries"]
+                ],
+                "chosen": (
+                    conflict["chosen"][0],
+                    conflict["chosen"][1],
+                    conflict["chosen"][2].isoformat() if hasattr(conflict["chosen"][2], "isoformat") else str(conflict["chosen"][2])
+                ),
+            })
+        return serialized
+
     def write_metadata(self, download_metadata, files_info, conflicts=None):
         """Write metadata JSON file."""
         print("Writing metadata...")
@@ -170,11 +190,10 @@ class OutputWriter:
                     "prefixes_ipv6_agg.csv", {}
                 ).get("count", 0),
             },
-            "conflicts": conflicts or [],
+            "conflicts": self._serialize_conflicts(conflicts),
             "usage_note": "This dataset is derived from public RIR delegated files and inherits their usage terms.",
         }
 
-        # Add aggregation info note
         metadata["note"] = "Only aggregated prefixes are stored for optimal performance"
 
         metadata_file = self.output_dir / "metadata.json"
