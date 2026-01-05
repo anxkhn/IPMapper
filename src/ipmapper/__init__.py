@@ -6,7 +6,7 @@ Regional Internet Registries (RIRs). It supports both IPv4 and
 IPv6 lookups with country names and currency information.
 """
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 from .countries import get_country_info
 from .lookup import (

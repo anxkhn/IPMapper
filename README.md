@@ -185,6 +185,7 @@ ipmapper update [OPTIONS]
 
 Options:
   --force        Force re-download even if data exists
+  --mmdb         Generate MMDB binary database file
   --data-dir     Custom data directory (default: ~/.ipmapper)
 ```
 
@@ -223,6 +224,7 @@ After running `ipmapper update`, these files are generated:
 
 - **`prefixes_ipv4_agg.csv`** - Aggregated IPv4 prefixes (format: `cidr,country_code`)
 - **`prefixes_ipv6_agg.csv`** - Aggregated IPv6 prefixes (format: `cidr,country_code`)
+- **`country.mmdb`** - MMDB binary database (generated with `--mmdb` flag)
 - **`metadata.json`** - Source URLs, timestamps, checksums, and statistics
 
 _Note: Only aggregated files are generated for optimal performance. Raw files are cleaned up automatically._
@@ -320,6 +322,12 @@ This project will always remain free and open source because:
 </table>
 
 ## Changelog
+
+### v1.2.0
+
+- Added MMDB binary database generation (`--mmdb` flag)
+- MMDB format compatible with MaxMind GeoLite2-Country structure
+- Supports both IPv4 and IPv6 lookups in single database
 
 ### v1.1.1
 

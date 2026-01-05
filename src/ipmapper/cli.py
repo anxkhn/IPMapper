@@ -20,15 +20,16 @@ from .parser import RIRParser
 
 
 @click.group()
-@click.version_option(version="1.1.1")
+@click.version_option(version="1.2.0")
 def cli():
     """Fast offline IP-to-country lookup using RIR data."""
 
 
 @cli.command()
 @click.option("--force", is_flag=True, help="Force re-download even if data exists")
+@click.option("--mmdb", is_flag=True, help="Generate MMDB binary database file")
 @click.option("--data-dir", type=click.Path(), help="Custom data directory")
-def update(force, data_dir):
+def update(force, mmdb, data_dir):
     """Download and process RIR data."""
     try:
         start_time = time.time()
@@ -59,6 +60,10 @@ def update(force, data_dir):
         files_info = writer.write_aggregated_csv_files(
             ipv4_agg_entries, ipv6_agg_entries
         )
+
+        if mmdb:
+            mmdb_info = writer.write_mmdb_file(ipv4_agg_entries, ipv6_agg_entries)
+            files_info.update(mmdb_info)
 
         writer.write_metadata(download_metadata, files_info, conflicts)
 
@@ -182,6 +187,7 @@ def status(data_dir):
         processed_files = [
             "prefixes_ipv4_agg.csv",
             "prefixes_ipv6_agg.csv",
+            "country.mmdb",
             "metadata.json",
         ]
 

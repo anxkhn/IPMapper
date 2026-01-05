@@ -1,9 +1,12 @@
-"""Output writer for generating CSV files."""
+"""Output writer for generating CSV and MMDB files."""
 
 import csv
 import json
 from datetime import datetime
 from pathlib import Path
+
+from mmdb_writer import MMDBWriter
+from netaddr import IPSet
 
 from .data_fetcher import calculate_sha256
 
@@ -61,6 +64,50 @@ class OutputWriter:
 
         return files_info
 
+    def write_mmdb_file(self, ipv4_agg_entries, ipv6_agg_entries):
+        """Write MMDB binary file for IP-to-country lookups."""
+        print("Writing MMDB file...")
+
+        mmdb_file = self.output_dir / "country.mmdb"
+
+        writer = MMDBWriter(
+            ip_version=6,
+            ipv4_compatible=True,
+            database_type="IPMapper-Country",
+            description={"en": "IP-to-country mapping derived from RIR data"},
+        )
+
+        total_entries = 0
+
+        for prefix, country_code in ipv4_agg_entries:
+            network = IPSet([str(prefix)])
+            writer.insert_network(
+                network,
+                {"country": {"iso_code": country_code}},
+            )
+            total_entries += 1
+
+        for prefix, country_code in ipv6_agg_entries:
+            network = IPSet([str(prefix)])
+            writer.insert_network(
+                network,
+                {"country": {"iso_code": country_code}},
+            )
+            total_entries += 1
+
+        writer.to_db_file(str(mmdb_file))
+
+        print("  MMDB written: " + str(total_entries) + " networks")
+
+        return {
+            "country.mmdb": {
+                "path": str(mmdb_file),
+                "size": mmdb_file.stat().st_size,
+                "sha256": calculate_sha256(mmdb_file),
+                "count": total_entries,
+            }
+        }
+
     def _serialize_conflicts(self, conflicts):
         """Convert datetime.date objects to ISO strings for JSON serialization."""
         if not conflicts:
@@ -102,7 +149,7 @@ class OutputWriter:
         metadata = {
             "generated_timestamp": datetime.utcnow().isoformat() + "Z",
             "generator": "ipmapper",
-            "version": "1.1.1",
+            "version": "1.2.0",
             "license": "MIT",
             "description": "IP-to-country mapping derived from RIR delegated files",
             "sources": download_metadata.get("sources", {}),

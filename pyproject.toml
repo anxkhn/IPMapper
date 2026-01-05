@@ -1,6 +1,6 @@
 [project]
 name = "ipmapper"
-version = "1.1.1"
+version = "1.2.0"
 description = "Fast offline IP-to-country lookup using RIR data with country names and currency support"
 readme = "README.md"
 authors = [
@@ -11,6 +11,8 @@ dependencies = [
     "requests>=2.31.0",
     "click>=8.1.0",
     "tqdm>=4.65.0",
+    "mmdb_writer>=0.2.4",
+    "netaddr>=0.8.0",
 ]
 license = { text = "MIT" }
 keywords = ["ip", "geolocation", "country", "currency", "rir", "offline", "radix-tree"]
